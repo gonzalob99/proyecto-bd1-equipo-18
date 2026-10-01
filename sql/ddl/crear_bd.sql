@@ -13,11 +13,11 @@ CREATE TABLE liga (
 );
 
 CREATE TABLE metodo_pago (
-    id_metodo INT IDENTITY(1,1) NOT NULL,
-    descripcion VARCHAR(50) NOT NULL,
+    id_metodo_pago INT IDENTITY(1,1) NOT NULL,
+    nombre VARCHAR(50) NOT NULL,
     -- Restricciones del metodo de pago, de la misma manera que en la tabla liga, y tambien hacemos que sea unico el nombre del metodo de pago.
-    CONSTRAINT PK_metodo_pago PRIMARY KEY (id_metodo),
-    CONSTRAINT UQ_metodo_pago_descripcion UNIQUE (descripcion)
+    CONSTRAINT PK_metodo_pago PRIMARY KEY (id_metodo_pago),
+    CONSTRAINT UQ_metodo_pago_nombre UNIQUE (nombre)
 );
 
 CREATE TABLE cliente (
@@ -35,7 +35,7 @@ CREATE TABLE producto (
     id_liga INT NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     descripcion VARCHAR(255) NULL,
-    precio_actual DECIMAL(10,2) NOT NULL,
+    precio DECIMAL(10,2) NOT NULL,
     equipo VARCHAR(100) NOT NULL,
     equipacion VARCHAR(50) NOT NULL,
     --Restricciones de producto, ahora agregamos, ademas de lo que veniamos haciedno, que verifique que el precio sea no negativo.
@@ -45,13 +45,13 @@ CREATE TABLE producto (
     CONSTRAINT FK_producto_liga FOREIGN KEY (id_liga) REFERENCES liga (id_liga)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-    CONSTRAINT CK_producto_precio_actual CHECK (precio_actual > 0)
+    CONSTRAINT CK_producto_precio CHECK (precio > 0)
 );
 
 CREATE TABLE compra (
     id_compra INT IDENTITY(1,1) NOT NULL,
     id_cliente INT NOT NULL,
-    id_metodo INT NOT NULL,
+    id_metodo_pago INT NOT NULL,
     fecha DATETIME NOT NULL CONSTRAINT DF_compra_fecha DEFAULT GETDATE(),
     --Restricciones de compra, nada nuevo, vease tablas anteriores.
     CONSTRAINT PK_compra PRIMARY KEY (id_compra),
@@ -62,35 +62,35 @@ CREATE TABLE compra (
     ON UPDATE NO ACTION,
     --Reglas de borrado/modificacion: No se puede borrar ni modificar el id de un metodo de pago si existen compras asociadas,
     --ya que cada compra debe conservar el metodo de pago utilizado.
-    CONSTRAINT FK_compra_metodo_pago FOREIGN KEY (id_metodo) REFERENCES metodo_pago (id_metodo)
+    CONSTRAINT FK_compra_metodo_pago FOREIGN KEY (id_metodo_pago) REFERENCES metodo_pago (id_metodo_pago)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION
 );
 
 CREATE TABLE stock (
-    stock_id INT IDENTITY(1,1) NOT NULL,
+    id_stock INT IDENTITY(1,1) NOT NULL,
     id_producto INT NOT NULL,
     talle VARCHAR(5) NOT NULL,
-    cantidad_disponible INT NOT NULL CONSTRAINT DF_stock_cantidad_disponible DEFAULT 0,
+    disponible INT NOT NULL CONSTRAINT DF_stock_disponible DEFAULT 0,
     --Restricciones de stock, vease tablas anteriores, hacemos que siempre verifique que el stock sea no negativo.
-    CONSTRAINT PK_stock PRIMARY KEY (stock_id),
+    CONSTRAINT PK_stock PRIMARY KEY (id_stock),
     --Reglas de borrado/modificacion: no se puede borrar ni modificar el id de un producto si tiene stock asociado,
     --para mantener la integridad de la informacion de stock.
     CONSTRAINT FK_stock_producto FOREIGN KEY (id_producto) REFERENCES producto (id_producto)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
     CONSTRAINT UQ_stock_producto_talle UNIQUE (id_producto, talle),
-    CONSTRAINT CK_stock_cantidad_disponible CHECK (cantidad_disponible >= 0)
+    CONSTRAINT CK_stock_disponible CHECK (disponible >= 0)
 );
 
 CREATE TABLE detalle_compra (
-    id_detalle_compra INT IDENTITY(1,1) NOT NULL,
+    id_detalle INT IDENTITY(1,1) NOT NULL,
     id_compra INT NOT NULL,
-    stock_id INT NOT NULL,
-    cantidad_comprada INT NOT NULL,
+    id_stock INT NOT NULL,
+    cantidad INT NOT NULL,
     precio_unitario DECIMAL(10,2) NOT NULL,
     --Restricciones de detalle_compra, vease tablas anteriores.
-    CONSTRAINT PK_detalle_compra PRIMARY KEY (id_detalle_compra),
+    CONSTRAINT PK_detalle_compra PRIMARY KEY (id_detalle),
     --Reglas de borrado/modificacion: no se puede borrar ni modificar el id de una compra si tiene detalles asociados,
     --ya que los detalles forman parte del historial de la venta.
     CONSTRAINT FK_detalle_compra_compra FOREIGN KEY (id_compra) REFERENCES compra (id_compra)
@@ -98,10 +98,10 @@ CREATE TABLE detalle_compra (
     ON UPDATE NO ACTION,
     --Reglas de borrado/modificacion: no se puede borrar ni modificar el id de un registro de stock si existen detalles de compra asociados,
     -- para conservar la referencia al stock correspondiente en el historial de ventas.
-    CONSTRAINT FK_detalle_compra_stock FOREIGN KEY (stock_id) REFERENCES stock (stock_id)
+    CONSTRAINT FK_detalle_compra_stock FOREIGN KEY (id_stock) REFERENCES stock (id_stock)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-    CONSTRAINT UQ_detalle_compra_compra_stock UNIQUE (id_compra, stock_id),
-    CONSTRAINT CK_detalle_compra_cantidad_comprada CHECK (cantidad_comprada > 0),
+    CONSTRAINT UQ_detalle_compra_compra_stock UNIQUE (id_compra, id_stock),
+    CONSTRAINT CK_detalle_compra_cantidad CHECK (cantidad > 0),
     CONSTRAINT CK_detalle_compra_precio_unitario CHECK (precio_unitario >= 0)
 );

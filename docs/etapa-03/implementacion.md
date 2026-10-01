@@ -16,12 +16,12 @@ Se eligió **SQL Server (T-SQL)** como motor de base de datos.
 | Tabla | Descripción | Clave primaria |
 |---|---|---|
 | `liga` | Liga o torneo al que pertenece un producto (ej. Liga Profesional Argentina, Premier League). | `id_liga` |
-| `metodo_pago` | Medios de pago disponibles (efectivo, tarjeta, transferencia, etc.). | `id_metodo` |
+| `metodo_pago` | Medios de pago disponibles (efectivo, tarjeta, transferencia, etc.). | `id_metodo_pago` |
 | `cliente` | Personas que realizan compras en el comercio. | `id_cliente` |
 | `producto` | Indumentaria deportiva a la venta (camisetas de equipos), vinculada a una liga. | `id_producto` |
-| `stock` | Cantidad disponible de cada producto, desglosada por talle. | `stock_id` |
+| `stock` | Cantidad disponible de cada producto, desglosada por talle. | `id_stock` |
 | `compra` | Encabezado de una compra: cliente, método de pago y fecha. | `id_compra` |
-| `detalle_compra` | Líneas de una compra: qué stock (producto + talle), cuánto y a qué precio. | `id_detalle_compra` |
+| `detalle_compra` | Líneas de una compra: qué stock (producto + talle), cuánto y a qué precio. | `id_detalle` |
 
 ---
 
@@ -32,17 +32,17 @@ Se eligió **SQL Server (T-SQL)** como motor de base de datos.
 En el modelo relacional, ciertas combinaciones de atributos permiten identificar de manera unica los registros:
 
 - `stock`: `(id_producto, talle)`
-- `detalle_compra`: `(id_compra, stock_id)`
+- `detalle_compra`: `(id_compra, id_stock)`
 
-En el DDL se optó por usar **claves sustitutas** como claves primarias: `stock_id` en `stock` e `id_detalle_compra` en `detalle_compra`, ambas `INT IDENTITY`.
+En el DDL se optó por usar **claves sustitutas** como claves primarias: `id_stock` en `stock` e `id_detalle` en `detalle_compra`, ambas `INT IDENTITY`.
 
-**Motivo:** una clave sustituta simplifica las relaciones que dependen de estas tablas. Por ejemplo, `detalle_compra` referencia a `stock` mediante una sola columna (`stock_id`), en lugar de tener que utilizar una clave compuesta.
+**Motivo:** una clave sustituta simplifica las relaciones que dependen de estas tablas. Por ejemplo, `detalle_compra` referencia a `stock` mediante una sola columna (`id_stock`), en lugar de tener que utilizar una clave compuesta.
 
 **La regla de negocio no se pierde:** se preserva con restricciones `UNIQUE`:
 
 ```sql
 CONSTRAINT UQ_stock_producto_talle UNIQUE (id_producto, talle)
-CONSTRAINT UQ_detalle_compra_compra_stock UNIQUE (id_compra, stock_id)
+CONSTRAINT UQ_detalle_compra_compra_stock UNIQUE (id_compra, id_stock)
 ```
 
 Así, aunque la PK ya no sea la combinación natural, el motor sigue impidiendo que se repita un mismo producto+talle en `stock`, o un mismo producto+talle dos veces dentro de la misma compra.
@@ -51,9 +51,9 @@ Así, aunque la PK ya no sea la combinación natural, el motor sigue impidiendo 
 
 En el DER, `monto_total` de `Compra` está representado con línea punteada (atributo derivado), por lo que no se agregó como columna en `compra`. Se calcula a partir de `detalle_compra`.
 
-### 3.3. `precio_unitario` distinto de `precio_actual`
+### 3.3. `precio_unitario` distinto de `precio`
 
-`producto.precio_actual` es el precio vigente hoy. `detalle_compra.precio_unitario` guarda el precio en el momento de cada compra, de modo que el historial de ventas no cambie si más adelante se actualiza el precio de un producto.
+`producto.precio` es el precio vigente hoy. `detalle_compra.precio_unitario` guarda el precio en el momento de cada compra, de modo que el historial de ventas no cambie si más adelante se actualiza el precio de un producto.
 
 ---
 
