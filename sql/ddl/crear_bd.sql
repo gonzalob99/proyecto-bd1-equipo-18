@@ -38,7 +38,7 @@ CREATE TABLE producto (
     precio_actual DECIMAL(10,2) NOT NULL,
     equipo VARCHAR(100) NOT NULL,
     equipacion VARCHAR(50) NOT NULL,
-    --Restricciones de producto, ahora agregamos, ademas de lo que veniamos haciedno, que verifique que el precio sea no negativo.
+    --Restricciones de producto, ahora agregamos, ademas de lo que veniamos haciedno, que verifique que el precio sea positivo.
     CONSTRAINT PK_producto PRIMARY KEY (id_producto),
     --Regla borrado/modificacion: no se puede borrar ni modificar el id de una liga si existen productos asociados,
     --ya que las compras deben conservarse como historial de ventas.
