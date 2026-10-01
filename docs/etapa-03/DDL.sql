@@ -27,7 +27,8 @@ CREATE TABLE cliente (
     email VARCHAR(100) NOT NULL,
     --Restricciones de cliente, igual que en las anteriores.
     CONSTRAINT PK_cliente PRIMARY KEY (id_cliente),
-    CONSTRAINT UQ_cliente_email UNIQUE (email)
+    CONSTRAINT UQ_cliente_email UNIQUE (email),
+    CONSTRAINT CK_cliente_email CHECK (email LIKE '%_@_%')
 );
 
 CREATE TABLE producto (
