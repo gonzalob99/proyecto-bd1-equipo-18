@@ -3,6 +3,13 @@
 -- Esta bueno tambien para ver los errores despues, asi es mas facil que identifiquemos que fue lo que fallo, onda, por ejemplo si se viola alguna restriccion que le pusimos deberia aparecer
 -- el nombre de la regla, para cosas mas complejas despues sirve.
 
+IF DB_ID('aura_store') IS NULL
+    CREATE DATABASE aura_store;
+GO
+
+USE aura_store;
+GO
+
 CREATE TABLE liga (
     --Hacemos identity para que se vaya generando solo el numero
     id_liga INT IDENTITY(1,1) NOT NULL,
