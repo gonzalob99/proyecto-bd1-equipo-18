@@ -1,4 +1,4 @@
-USE AuraStore;
+USE aura_store;
 GO
 
 --LIGAS
