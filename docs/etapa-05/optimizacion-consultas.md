@@ -90,8 +90,6 @@ Con los parámetros preparados, se esperan **1.100.000 registros en total y 603 
 
 Para aplicar el índice a los datos del proyecto se ejecuta `crear_indices.sql` y después se puede consultar `informe_ventas_optimizado.sql`.
 
-**Las pruebas en SQL Server quedan pendientes**, ya que no se contaba con una instancia disponible. Por lo tanto, todavía no se presentan mediciones ni capturas que demuestren una mejora de rendimiento.
-
 ## 6. Archivos
 
 - `sql/tecnico/indices/crear_indices.sql`: crea el índice en la tabla `compra`.
@@ -102,4 +100,4 @@ Para aplicar el índice a los datos del proyecto se ejecuta `crear_indices.sql` 
 
 Se preparó un índice por fecha para facilitar las consultas del historial de compras, conservando la clave primaria y la estructura del proyecto.
 
-También se dejó una demostración para comparar la consulta sin índice por fecha, con un índice simple y con uno con cobertura. La mejora que se obtenga deberá comprobarse al ejecutar las pruebas en SQL Server.
+También se dejó una demostración para comparar la consulta sin índice por fecha, con un índice simple y con uno con cobertura.
