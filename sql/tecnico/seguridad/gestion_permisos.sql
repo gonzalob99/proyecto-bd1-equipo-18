@@ -4,15 +4,14 @@ GO
 SET NOCOUNT ON;
 GO
 
+-- Crear el rol y el usuario de prueba si no existen
 IF DATABASE_PRINCIPAL_ID(N'rol_consulta_productos') IS NULL
-BEGIN
-    RAISERROR(
-        'No existe el rol rol_consulta_productos en aura_store.',
-        16,
-        1
-    );
-    RETURN;
-END;
+    CREATE ROLE rol_consulta_productos;
+
+IF DATABASE_PRINCIPAL_ID(N'usuario_con_rol') IS NULL
+    CREATE USER usuario_con_rol WITHOUT LOGIN;
+
+ALTER ROLE rol_consulta_productos ADD MEMBER usuario_con_rol;
 GO
 
 GRANT SELECT ON OBJECT::dbo.producto TO rol_consulta_productos;
