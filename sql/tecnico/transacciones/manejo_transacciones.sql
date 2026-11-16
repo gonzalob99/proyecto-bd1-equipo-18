@@ -84,11 +84,6 @@ BEGIN TRY
     INSERT INTO detalle_compra (id_compra, stock_id, cantidad_comprada, precio_unitario)
     VALUES (@id_compra_actual, @stock_id, @cantidad_comprada, @precio_unitario);
 
-    -- Descontar del stock
-    UPDATE stock
-    SET cantidad_disponible = cantidad_disponible - @cantidad_comprada
-    WHERE stock_id = @stock_id;
-
     -- Confirmar cambios
     COMMIT TRANSACTION;
     PRINT 'Transaccion exitosa.';
@@ -101,6 +96,6 @@ BEGIN CATCH
         ROLLBACK TRANSACTION;
     END
 
-    PRINT 'Ocurrio un error, se cancelo la operacion.';
+    PRINT 'Ocurrio un error, se cancelo la operacion. ' + ERROR_MESSAGE();
 END CATCH;
 GO
