@@ -15,9 +15,8 @@ CREATE OR ALTER TRIGGER dbo.trg_actualizar_stock_despues_de_compra
                              ON i.stock_id = s.stock_id
                       WHERE  s.cantidad_disponible < i.cantidad_comprada)
                BEGIN
-                   RAISERROR ('No hay stock suficiente para realizar la venta de uno o mas productos seleccionados.', 16, 1);
-                   ROLLBACK;
-                   RETURN;
+                   ROLLBACK TRANSACTION;
+                   THROW 50001, 'No hay stock suficiente para realizar la venta de uno o mas productos seleccionados.', 1;
                END
            -- Actualizacion: descontar las cantidades compradas del stock disponible
            UPDATE s
