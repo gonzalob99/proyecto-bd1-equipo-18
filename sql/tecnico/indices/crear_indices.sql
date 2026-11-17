@@ -2,7 +2,7 @@
 -- Aura Store - Indice para consultas de compras por fecha
 -- Etapa V - Optimizacion de consultas
 -- =============================================================
--- Caso de uso: consultar compras de un periodo y facilitar el
+-- El indice facilita la consulta de compras de un periodo y el
 -- filtro por fecha del informe de ventas de la Etapa IV.
 -- Ejecutar despues de sql/ddl/crear_bd.sql.
 -- =============================================================
@@ -10,17 +10,22 @@
 USE aura_store;
 GO
 
+-- =========================================================
+-- A. VERIFICACION DE LA TABLA
+-- La tabla dbo.compra debe existir antes de crear el indice.
+-- =========================================================
 IF OBJECT_ID(N'dbo.compra', N'U') IS NULL
 BEGIN
     RAISERROR('Primero se debe crear la tabla dbo.compra.', 16, 1);
     RETURN;
 END;
 
--- PK_compra ya genera un indice agrupado por id_compra.
--- Se conserva esa clave y se agrega un indice NO agrupado por fecha.
--- INCLUDE guarda los datos del cliente y del metodo de pago en
--- el nivel hoja, para cubrir tambien el listado de compras.
+-- =========================================================
+-- B. INDICE POR FECHA CON COBERTURA
+-- El indice no agrupado usa fecha como clave. INCLUDE agrega
+-- id_cliente e id_metodo al nivel hoja para cubrir el listado.
 -- id_compra ya forma parte del indice por ser la clave agrupada.
+-- =========================================================
 IF NOT EXISTS (
     SELECT 1
     FROM sys.indexes
@@ -33,8 +38,12 @@ BEGIN
     INCLUDE (id_cliente, id_metodo);
 END;
 
--- Verificar el indice y sus columnas declaradas.
--- La clave agrupada implicita (id_compra) no aparece en este listado.
+-- =========================================================
+-- C. VERIFICACION DEL INDICE
+-- El listado muestra fecha como columna clave e id_cliente e
+-- id_metodo como columnas incluidas. id_compra se agrega de forma
+-- implicita y queda fuera del listado.
+-- =========================================================
 SELECT
     i.name AS indice,
     i.type_desc AS tipo,

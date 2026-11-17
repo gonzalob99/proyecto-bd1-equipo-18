@@ -29,3 +29,15 @@ El modelo tiene siete tablas, está normalizado hasta la **Tercera Forma Normal 
 4. Instalar el [trigger de auditoría de precios](sql/tecnico/triggers/auditar_precio_producto.sql), la [función de disponibilidad](sql/tecnico/funciones/verif_stock.sql) y el [procedimiento de compra](sql/tecnico/procedimientos/registrar_compra.sql), en ese orden. En una base existente, ejecutar este paso completo antes de volver a registrar compras. El script de auditoría retira el trigger de stock anterior y el procedimiento se encarga del descuento.
 5. Probar el [comprobante](sql/consultas/comprobante.sql) con `@id_compra = 13` para ver dos renglones y el total acumulado. Para ejecutar el [informe de ventas original](sql/consultas/informe_ventas.sql), reemplazar `USE AuraStore` por `USE aura_store` en el editor y ajustar el rango de fechas según el período a consultar.
 
+## Pruebas de la Etapa V
+
+Con la puesta en marcha completa, ejecutar cada archivo entero en una ventana de SSMS sobre la base de prueba. Revisar **Resultados** y **Mensajes** para ver los casos y los valores esperados.
+
+| Prueba | Qué comprobar |
+| --- | --- |
+| [Procedimiento y función](sql/tecnico/procedimientos/pruebas_registrar_compra.sql) | Disponibilidad en el límite de stock, rechazo por falta de stock y registro de una compra válida. |
+| [Transacciones](sql/tecnico/transacciones/pruebas_transacciones.sql) | El procedimiento confirma su nivel de transacción en una compra válida y revierte el descuento de stock si falla la clave foránea del método de pago. |
+| [Auditoría de precios](sql/tecnico/triggers/pruebas_auditoria_precio.sql) | El trigger genera dos registros al cambiar dos precios y el `ROLLBACK` los revierte. |
+| [Seguridad](sql/tecnico/seguridad/pruebas_seguridad.sql) | El usuario del rol puede consultar productos y ligas. El motor rechaza el intento de actualización. Ejecutar primero [la configuración de permisos](sql/tecnico/seguridad/gestion_permisos.sql). |
+| [Índices](sql/tecnico/indices/pruebas_indices.sql) | Las consultas devuelven las mismas 603 filas. Activar el plan de ejecución real con `Ctrl + M` para comparar el acceso y revisar las lecturas en **Mensajes**. |
+

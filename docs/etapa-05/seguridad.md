@@ -20,7 +20,7 @@ El archivo `sql/tecnico/seguridad/gestion_permisos.sql` otorga esos permisos y p
 
 Las pruebas se realizaron en SQL Server, sobre la base de datos `aura_store`, usando el contexto del usuario `usuario_con_rol`.
 
-El archivo `sql/tecnico/seguridad/pruebas_seguridad.sql` comprueba los permisos del usuario y realiza consultas sobre las tablas.
+[pruebas_seguridad.sql](../../sql/tecnico/seguridad/pruebas_seguridad.sql) muestra los permisos del rol, comprueba los permisos efectivos de su miembro y ejecuta una consulta sobre cada tabla. Requiere una conexión con permiso para cambiar al contexto de `usuario_con_rol`.
 
 | Operación | `dbo.producto` | `dbo.liga` |
 |---|---|---|
@@ -29,7 +29,7 @@ El archivo `sql/tecnico/seguridad/pruebas_seguridad.sql` comprueba los permisos 
 | UPDATE | No permitido | No permitido |
 | DELETE | No permitido | No permitido |
 
-Las consultas de prueba devolvieron los siguientes resultados: `SELECT` permitido (`1`), e `INSERT`, `UPDATE` y `DELETE` no permitidos (`0`). No se modificaron filas durante las pruebas.
+Se espera `1` para `SELECT` y `0` para `INSERT`, `UPDATE` y `DELETE`. El script también intenta un `UPDATE` sin filas coincidentes sobre `dbo.producto`. Se espera el error de permisos `229`. Al terminar, se restaura el contexto original de la conexión.
 
 ## 4. Archivos
 

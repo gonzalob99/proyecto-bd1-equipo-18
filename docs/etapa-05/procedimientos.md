@@ -41,22 +41,16 @@ Las ventas nuevas se registran con `dbo.sp_registrar_compra` para que la validac
 
 Instalar y actualizar los scripts según la [puesta en marcha](../../README.md#puesta-en-marcha).
 
-### Caso correcto
+El script toma el stock inicial del producto 1, talle M. Con los datos recién cargados hay 15 unidades.
 
-Producto 1, talle M, cantidad 1 (stock inicial 15).
+- La función devuelve `1` al pedir todo el stock y `0` al superar ese límite o consultar un talle sin stock cargado.
+- Al registrar una compra por encima del stock, el procedimiento devuelve «Stock insuficiente para completar la compra» y conserva las existencias.
+- Una compra válida genera un encabezado para el cliente 2 con el método de pago 4 y un detalle de una unidad al precio vigente. Con los datos iniciales, el precio es `95999.00` y el stock pasa de 15 a 14.
 
-Con los datos de prueba recién cargados se esperan estos resultados.
+El script muestra la compra dentro de una transacción de prueba y luego la revierte. Se puede repetir con los mismos datos, aunque SQL Server puede dejar saltos en los identificadores autogenerados.
 
- - Se crea la compra 15 (cliente 2, método 4) y su detalle 16 (stock_id 2, cantidad 1, precio 95999.00).
- - El stock de producto 1 talle M pasa de 15 a 14.
- - El total de compras pasa de 14 a 15.
+## 6. Prueba de transacciones
 
-### Caso incorrecto
+[pruebas_transacciones.sql](../../sql/tecnico/transacciones/pruebas_transacciones.sql) muestra el efecto del `COMMIT` interno en una compra válida. El `ROLLBACK` de la transacción externa revierte esa compra de ejemplo.
 
-Producto 1, talle M, cantidad 99999.
-
-Se espera el error «Stock insuficiente para completar la compra». El total de compras queda en 15 y el stock sigue en 14.
-
-## 6. Observación sobre la demostración
-
-Cada ejecución del caso correcto registra una compra nueva y descuenta stock. Para repetir la demostración desde cero, hay que recargar la base con `sql/dml/datos_prueba.sql`.
+El segundo caso llama al procedimiento con stock suficiente y un método de pago inexistente. Después de descontar stock, la inserción del encabezado falla con el error `547` de `FK_compra_metodo_pago`. Se espera que el procedimiento restaure el stock, conserve los recuentos de compras y detalles y deje cero transacciones abiertas.

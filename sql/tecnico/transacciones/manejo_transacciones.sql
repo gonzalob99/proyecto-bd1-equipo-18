@@ -1,8 +1,22 @@
--- Aura Store - Manejo de transacciones (Etapa V)
+-- =============================================================
+-- Aura Store - Registro de una compra con transacciones explicitas
+-- Etapa V - Manejo de transacciones
+-- =============================================================
+-- Ejecutar sobre la base de prueba con las tablas creadas y sin
+-- una transaccion abierta. Si la base tiene el trigger de stock
+-- anterior, retirarlo con el paso 4 del README antes del ejemplo.
+-- El COMMIT deja guardados la compra y el descuento de stock.
+-- =============================================================
+
 USE aura_store;
 GO
 
--- 1. Insertar datos de prueba cumpliendo estrictamente con todas las columnas obligatorias
+-- =========================================================
+-- A. PREPARACION DE DATOS
+-- Se insertan las filas de ejemplo que falten. IDENTITY_INSERT
+-- permite asignarles los ids usados por el script. Estas filas
+-- se insertan antes de abrir la transaccion de compra.
+-- =========================================================
 
 -- Método de pago
 IF NOT EXISTS (SELECT 1 FROM metodo_pago WHERE id_metodo = 1)
@@ -28,7 +42,7 @@ BEGIN
     SET IDENTITY_INSERT liga OFF;
 END
 
--- Producto (incluyendo tanto 'equipo' como 'equipacion')
+-- Producto de la liga de ejemplo
 IF NOT EXISTS (SELECT 1 FROM producto WHERE id_producto = 1)
 BEGIN
     SET IDENTITY_INSERT producto ON;
@@ -37,7 +51,7 @@ BEGIN
     SET IDENTITY_INSERT producto OFF;
 END
 
--- Stock (asociado al producto 1)
+-- Stock de talle L para el producto de ejemplo
 IF NOT EXISTS (SELECT 1 FROM stock WHERE stock_id = 1)
 BEGIN
     SET IDENTITY_INSERT stock ON;
@@ -46,17 +60,21 @@ BEGIN
 END
 GO
 
--- 2. Ejecutar la transacción de compra
+-- =========================================================
+-- B. TRANSACCION DE COMPRA
+-- Se descuenta una unidad del stock 1 y se guarda una compra con
+-- su detalle. El COMMIT confirma el descuento y ambas inserciones.
+-- =========================================================
 DECLARE @id_cliente INT = 1;
 DECLARE @id_metodo INT = 1;
 DECLARE @stock_id INT = 1;
 DECLARE @cantidad_comprada INT = 1;
 
 BEGIN TRY
-    -- Arrancamos la transacción
     BEGIN TRANSACTION;
 
-    -- Descontar stock solo si alcanza la cantidad disponible.
+    -- Se comprueba que alcance el stock en la misma sentencia
+    -- que lo descuenta. Si no se actualiza una fila, se aborta la compra.
     UPDATE dbo.stock
     SET cantidad_disponible = cantidad_disponible - @cantidad_comprada
     WHERE stock_id = @stock_id
@@ -66,30 +84,32 @@ BEGIN TRY
     IF @@ROWCOUNT = 0
         THROW 50001, 'Stock insuficiente o cantidad invalida.', 1;
 
-    -- Registrar compra principal
+    -- Se guarda el encabezado y se obtiene el id para el detalle.
     INSERT INTO compra (id_cliente, id_metodo)
     VALUES (@id_cliente, @id_metodo);
 
     DECLARE @id_compra_actual INT = SCOPE_IDENTITY();
 
-    -- Obtener precio del producto
+    -- Se toma el precio de catalogo para guardarlo en el detalle.
     DECLARE @precio_unitario DECIMAL(10,2);
     SELECT @precio_unitario = p.precio_actual
     FROM stock s
     JOIN producto p ON s.id_producto = p.id_producto
     WHERE s.stock_id = @stock_id;
 
-    -- Registrar detalle de compra
     INSERT INTO detalle_compra (id_compra, stock_id, cantidad_comprada, precio_unitario)
     VALUES (@id_compra_actual, @stock_id, @cantidad_comprada, @precio_unitario);
 
-    -- Confirmar cambios
     COMMIT TRANSACTION;
     PRINT 'Transaccion exitosa.';
 
 END TRY
+-- =========================================================
+-- C. MANEJO DE ERRORES
+-- Si falla la compra, se revierte la transaccion abierta y se
+-- muestra el error en la pestana Mensajes de SSMS.
+-- =========================================================
 BEGIN CATCH
-    -- Revertir en caso de error
     IF @@TRANCOUNT > 0
     BEGIN
         ROLLBACK TRANSACTION;

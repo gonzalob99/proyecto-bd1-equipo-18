@@ -22,38 +22,6 @@ La fila guarda el identificador del producto, ambos precios, la fecha y hora en 
 
 ### Demostración con los datos de prueba
 
-El ejemplo aumenta el precio de las camisetas de Boca y River en una sola sentencia y asigna a la del Real Madrid su precio vigente. También ejecuta un `UPDATE` sobre la descripción de la camiseta de Boca. La primera consulta debe devolver dos filas, una por cada precio que subió. La segunda debe devolver cero porque el `ROLLBACK` revierte los precios y los registros de la auditoría.
+Ejecutar [pruebas_auditoria_precio.sql](../../sql/tecnico/triggers/pruebas_auditoria_precio.sql) con el trigger instalado y los datos de ejemplo cargados.
 
-```sql
-USE aura_store;
-GO
-
-DECLARE @ultima_auditoria BIGINT = ISNULL(
-    (SELECT MAX(id_auditoria) FROM dbo.auditoria_precio_producto), 0
-);
-
-BEGIN TRANSACTION;
-
-UPDATE dbo.producto
-SET precio_actual = CASE WHEN id_producto IN (1, 2)
-                         THEN precio_actual + 1000.00
-                         ELSE precio_actual END
-WHERE id_producto IN (1, 2, 3);
-
-UPDATE dbo.producto
-SET descripcion = 'Descripcion temporal para la prueba'
-WHERE id_producto = 1;
-
-SELECT id_producto, precio_anterior, precio_nuevo, fecha_cambio_utc, login_cambio
-FROM dbo.auditoria_precio_producto
-WHERE id_auditoria > @ultima_auditoria
-  AND id_producto IN (1, 2, 3)
-ORDER BY id_producto;
-
-ROLLBACK TRANSACTION;
-
-SELECT COUNT(*) AS cambios_de_la_prueba_persistidos
-FROM dbo.auditoria_precio_producto
-WHERE id_auditoria > @ultima_auditoria
-  AND id_producto IN (1, 2, 3);
-```
+El script aumenta el precio de las camisetas de Boca y River en una sola sentencia y asigna a la del Real Madrid su precio vigente. También cambia la descripción de la camiseta de Boca. Se esperan dos filas de auditoría, una por cada precio que subió, con el precio anterior, el nuevo, la fecha UTC y el login de la conexión. Después del `ROLLBACK`, se espera que los productos recuperen sus valores iniciales y el recuento de registros de auditoría de la prueba dé cero.
