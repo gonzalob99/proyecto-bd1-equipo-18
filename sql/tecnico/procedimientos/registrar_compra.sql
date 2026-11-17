@@ -23,14 +23,15 @@ CREATE OR ALTER PROCEDURE dbo.sp_registrar_compra
 AS
 BEGIN
     SET NOCOUNT ON;
-    -- Con XACT_ABORT, un error de clave foranea obliga a revertir la transaccion.
-    SET XACT_ABORT ON;
 
     -- =========================================================
     -- A. VALIDACIONES PREVIAS
     -- Antes de abrir la transaccion, se valida la cantidad y se busca
     -- la fila de stock y el precio de catalogo para el detalle.
     -- =========================================================
+    -- Un rechazo esperado permite que el llamador siga usando su transaccion.
+    SET XACT_ABORT OFF;
+
     IF @cantidad IS NULL OR @cantidad <= 0
         THROW 50002, 'La cantidad comprada debe ser mayor que cero.', 1;
 
@@ -63,6 +64,8 @@ BEGIN
     -- El descuento de stock y las inserciones de compra y detalle
     -- se hacen en la misma transaccion.
     -- =========================================================
+    -- Un error de escritura, como una clave foranea invalida, requiere rollback.
+    SET XACT_ABORT ON;
     BEGIN TRANSACTION;
 
     BEGIN TRY

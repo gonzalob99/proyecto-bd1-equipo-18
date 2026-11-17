@@ -100,6 +100,9 @@ BEGIN TRY
        )
         THROW 51004, 'La compra excedida debia rechazarse sin descontar stock.', 1;
 
+    IF XACT_STATE() <> 1
+        THROW 51007, 'El rechazo de stock debe dejar utilizable la transaccion de la prueba.', 1;
+
     -- =========================================================
     -- C. COMPRA VALIDA
     -- El OUTPUT identifica una compra con un detalle. Se guarda

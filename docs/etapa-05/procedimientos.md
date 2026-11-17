@@ -16,7 +16,7 @@ Un procedimiento almacenado es un programa SQL guardado dentro del motor que eje
 
 ## 3. Implementación en SQL Server Express
 
-`CREATE OR ALTER PROCEDURE` con parámetros de entrada y un parámetro `OUTPUT` para devolver el id de la compra generada. Dentro del procedimiento se usa `BEGIN TRANSACTION` con `TRY/CATCH` y `SET XACT_ABORT ON` para que una falla revierta todo.
+`CREATE OR ALTER PROCEDURE` con parámetros de entrada y un parámetro `OUTPUT` para devolver el id de la compra generada. Las validaciones previas se ejecutan con `XACT_ABORT OFF` para que un rechazo deje utilizable la transacción del llamador. Al registrar la compra se activa `XACT_ABORT ON` y se usa `BEGIN TRANSACTION` con `TRY/CATCH` para revertir la operación si falla una escritura.
 
 ## 4. Caso concreto aplicado: `dbo.sp_registrar_compra`
 
@@ -32,7 +32,7 @@ Un procedimiento almacenado es un programa SQL guardado dentro del motor que eje
 4. Inserta el encabezado en `compra`, obtiene su id con `SCOPE_IDENTITY()` e inserta el renglón en `detalle_compra` con el precio actual.
 5. Confirma la transacción. Si algo falla, hace `ROLLBACK` del descuento y de cualquier inserción realizada, y vuelve a lanzar el error.
 
-Las ventas nuevas se registran con `dbo.sp_registrar_compra` para que la validación, el descuento de stock y la venta se ejecuten en la misma transacción.
+Las ventas nuevas se registran con `dbo.sp_registrar_compra`, que vuelve a comprobar el stock en el mismo `UPDATE` que lo descuenta y guarda la compra y el detalle en esa transacción.
 
 ## 5. Script y pruebas
 
