@@ -14,7 +14,7 @@ El modelo tiene siete tablas, está normalizado hasta la **Tercera Forma Normal 
 | **II. Modelado conceptual y lógico** | Entidades, relaciones y cardinalidades en el DER, transformación a tablas con claves primarias y foráneas, y normalización paso a paso de 1FN a 3FN. | [DER](docs/etapa-02/der/der.png), [modelo relacional](docs/etapa-02/Transformaci%C3%B3n%20al%20Modelo%20Relacional/modelo_relacional.md) y [normalización](docs/etapa-02/normalizacion.md). |
 | **III. Implementación física** | Creación de la base y sus restricciones, decisiones de diseño y carga de datos de prueba. | [Implementación](docs/etapa-03/implementacion.md), [DDL](sql/ddl/crear_bd.sql) y [DML](sql/dml/datos_prueba.sql). |
 | **IV. Consultas y casos de uso** | Comprobante con subtotales y total, ventas por liga en un rango de fechas y clientes con gasto superior al promedio de quienes compraron. También hay consultas de stock, ranking de productos y ventas por método de pago. | [Casos de uso](docs/etapa-04/casos-uso.md), [documentación de las consultas](docs/etapa-04/) y scripts de [comprobante](sql/consultas/comprobante.sql), [informe de ventas](sql/consultas/informe_ventas.sql) y [consulta avanzada](sql/consultas/consulta_avanzada.sql). |
-| **V. Temas técnicos** | Procedimiento de compra, función de disponibilidad, transacciones, trigger de stock, permisos de lectura por rol e índice por fecha de compra. | [Documentación técnica](docs/etapa-05/) y [scripts de implementación y pruebas](sql/tecnico/). |
+| **V. Temas técnicos** | Procedimiento de compra, función de disponibilidad, transacciones, trigger de auditoría de precios, permisos de lectura por rol e índice por fecha de compra. | [Documentación técnica](docs/etapa-05/) y [scripts de implementación y pruebas](sql/tecnico/). |
 
 ## Estructura del repositorio
 
@@ -25,6 +25,7 @@ El modelo tiene siete tablas, está normalizado hasta la **Tercera Forma Normal 
 
 1. Conectarse a una instancia de **SQL Server** desde **SQL Server Management Studio (SSMS)** con permisos para crear bases de datos.
 2. Ejecutar [`crear_bd.sql`](sql/ddl/crear_bd.sql) en una instancia sin una instalación previa del proyecto. El script crea la base `aura_store` y sus tablas.
-3. Ejecutar [`datos_prueba.sql`](sql/dml/datos_prueba.sql) antes de instalar el trigger de stock. La carga incluye compras de agosto y septiembre de 2026.
-4. Probar el [comprobante](sql/consultas/comprobante.sql) con `@id_compra = 13` para ver dos renglones y el total acumulado. Para ejecutar el [informe de ventas original](sql/consultas/informe_ventas.sql), reemplazar `USE AuraStore` por `USE aura_store` en el editor y ajustar el rango de fechas según el período a consultar.
+3. Ejecutar [`datos_prueba.sql`](sql/dml/datos_prueba.sql). La carga incluye compras de agosto y septiembre de 2026.
+4. Instalar el [trigger de auditoría de precios](sql/tecnico/triggers/auditar_precio_producto.sql), la [función de disponibilidad](sql/tecnico/funciones/verif_stock.sql) y el [procedimiento de compra](sql/tecnico/procedimientos/registrar_compra.sql), en ese orden. En una base existente, ejecutar este paso completo antes de volver a registrar compras. El script de auditoría retira el trigger de stock anterior y el procedimiento se encarga del descuento.
+5. Probar el [comprobante](sql/consultas/comprobante.sql) con `@id_compra = 13` para ver dos renglones y el total acumulado. Para ejecutar el [informe de ventas original](sql/consultas/informe_ventas.sql), reemplazar `USE AuraStore` por `USE aura_store` en el editor y ajustar el rango de fechas según el período a consultar.
 

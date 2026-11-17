@@ -16,6 +16,9 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON; -- si algo falla, se revierte toda la transaccion
 
+    IF @cantidad IS NULL OR @cantidad <= 0
+        THROW 50002, 'La cantidad comprada debe ser mayor que cero.', 1;
+
     DECLARE @stock_id INT;
     DECLARE @precio_actual DECIMAL(10,2);
 
@@ -46,14 +49,19 @@ BEGIN
     BEGIN TRANSACTION;
 
     BEGIN TRY
+        UPDATE dbo.stock
+        SET cantidad_disponible = cantidad_disponible - @cantidad
+        WHERE stock_id = @stock_id
+          AND cantidad_disponible >= @cantidad;
+
+        IF @@ROWCOUNT = 0
+            THROW 50001, 'Stock insuficiente para completar la compra.', 1;
+
         INSERT INTO compra (id_cliente, id_metodo, fecha)
         VALUES (@id_cliente, @id_metodo, GETDATE());
 
         SET @id_compra_generada = SCOPE_IDENTITY();
 
-        -- Este INSERT dispara trg_actualizar_stock_despues_de_compra,
-        -- que valida de nuevo el stock (control a nivel de motor,
-        -- no solo a nivel de aplicacion) y lo descuenta si corresponde.
         INSERT INTO detalle_compra (id_compra, stock_id, cantidad_comprada, precio_unitario)
         VALUES (@id_compra_generada, @stock_id, @cantidad, @precio_actual);
 

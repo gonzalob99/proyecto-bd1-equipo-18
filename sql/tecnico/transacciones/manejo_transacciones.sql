@@ -56,16 +56,15 @@ BEGIN TRY
     -- Arrancamos la transacción
     BEGIN TRANSACTION;
 
-    -- Validar stock disponible
-    DECLARE @stock_actual INT;
-    SELECT @stock_actual = cantidad_disponible 
-    FROM stock 
-    WHERE stock_id = @stock_id;
+    -- Descontar stock solo si alcanza la cantidad disponible.
+    UPDATE dbo.stock
+    SET cantidad_disponible = cantidad_disponible - @cantidad_comprada
+    WHERE stock_id = @stock_id
+      AND @cantidad_comprada > 0
+      AND cantidad_disponible >= @cantidad_comprada;
 
-    IF @stock_actual IS NULL OR @stock_actual < @cantidad_comprada
-    BEGIN
-        RAISERROR('Stock insuficiente.', 16, 1);
-    END
+    IF @@ROWCOUNT = 0
+        THROW 50001, 'Stock insuficiente o cantidad invalida.', 1;
 
     -- Registrar compra principal
     INSERT INTO compra (id_cliente, id_metodo)

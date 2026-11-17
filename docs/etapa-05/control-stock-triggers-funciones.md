@@ -1,116 +1,59 @@
-# Automatización y Control de Stock: Funciones y Triggers
+# Verificación de stock y auditoría de precios
 
-**Proyecto:** Aura Store — Sistema de gestión para un comercio de indumentaria deportiva  
-**Etapa V:** Lógica de negocio técnica — Programabilidad en el motor de base de datos
+**Proyecto Aura Store** · Etapa V
 
----
+## Función de disponibilidad de stock
 
-## 1. Justificación y Objetivos de Negocio
-
-En una tienda de indumentaria deportiva con ventas directas, el inventario es un recurso crítico que debe mantenerse consistente en todo momento. Para evitar inconsistencias (como sobreventas o stocks negativos) y desacoplar la lógica de validación de las aplicaciones cliente, se implementaron dos componentes de base de datos:
-
-1. **Función Escalar de Verificación (`dbo.fn_verificar_disponibilidad_stock`):**
-   - **Objetivo:** Permitir a cualquier capa cliente (frontend, backend o procesos de facturación) consultar de forma previa y ligera si existe disponibilidad suficiente de un producto en un talle específico antes de avanzar al checkout.
-   - **Archivo:** `sql/tecnico/funciones/verif_stock.sql`.
-
-2. **Trigger Automático de Inventario (`dbo.trg_actualizar_stock_despues_de_compra`):**
-   - **Objetivo:** Garantizar la integridad transaccional del stock al registrar ventas en `detalle_compra`. Valida que las cantidades solicitadas no superen el inventario real y realiza el descuento automático en `stock`. Si la cantidad pedida no está cubierta, revierte la transacción.
-   - **Archivo:** `sql/tecnico/triggers/actualizar_stock.sql`.
-
----
-
-## 2. Descripción Técnica de los Componentes
-
-### 2.1. Función Escalar: `dbo.fn_verificar_disponibilidad_stock`
-
-- **Firma:** `(@id_producto INT, @talle VARCHAR(5), @cantidad_requerida INT) RETURNS BIT`
-- **Comportamiento:**
-  - Consulta la tabla `stock` filtrando por `id_producto` y `talle`.
-  - Si el registro existe y `cantidad_disponible >= @cantidad_requerida`, retorna `1` (True).
-  - Si no existe disponibilidad o el artículo no posee registro para dicho talle, retorna `0` (False).
-
-#### Ejemplo de uso:
+La función [`dbo.fn_verificar_disponibilidad_stock`](../../sql/tecnico/funciones/verif_stock.sql) recibe el identificador del producto, el talle y la cantidad requerida. Devuelve `1` cuando hay stock suficiente y `0` cuando el talle no tiene stock cargado o la cantidad es insuficiente. El procedimiento de compra la usa para hacer una consulta previa y valida el stock de nuevo al descontarlo dentro de la transacción.
 
 ```sql
 USE aura_store;
 GO
 
--- Consultar si hay al menos 2 unidades del producto 1 en talle M
-SELECT dbo.fn_verificar_disponibilidad_stock(1, 'M', 2) AS hay_stock;
-```
-
----
-
-### 2.2. Trigger: `dbo.trg_actualizar_stock_despues_de_compra`
-
-- **Evento:** `AFTER INSERT` sobre la tabla `dbo.detalle_compra`.
-- **Estrategia multirregistro (set-based):**
-  - Evalúa la pseudotabla `inserted` mediante un `IF EXISTS` con `INNER JOIN` a `stock`.
-  - Si alguna de las líneas insertadas excede el stock disponible actual, dispara un error con `RAISERROR` (severidad 16), ejecuta `ROLLBACK TRANSACTION` y cancela la operación con `RETURN`.
-  - Si todas las líneas tienen stock válido, ejecuta un `UPDATE` en lote sobre `stock` descontando `cantidad_comprada`.
-
----
-
-## 3. Pruebas y Validación
-
-A continuación se detallan los escenarios para verificar el correcto funcionamiento de los objetos:
-
-### 3.1. Prueba de verificación previa (Función)
-
-```sql
-USE aura_store;
-GO
-
--- Comprobacion con valores validos vs excesivos
 SELECT dbo.fn_verificar_disponibilidad_stock(1, 'L', 1) AS prueba_valida;
 SELECT dbo.fn_verificar_disponibilidad_stock(1, 'L', 99999) AS prueba_excedida;
 ```
 
-### 3.2. Prueba de inserción exitosa con descuento automático (Trigger)
+## Trigger de auditoría de precios
+
+El trigger [`dbo.trg_auditar_precio_producto`](../../sql/tecnico/triggers/auditar_precio_producto.sql) registra los cambios del precio de catálogo de las camisetas. Se ejecuta después de un `UPDATE` sobre `dbo.producto` y une `deleted` (valores anteriores) con `inserted` (valores nuevos) por `id_producto`. Inserta una fila en `dbo.auditoria_precio_producto` por cada producto cuyo `precio_actual` efectivamente cambió, incluso cuando una sola sentencia actualiza varios productos.
+
+La fila guarda el identificador del producto, ambos precios, la fecha y hora en UTC y el login que abrió la sesión de SQL Server. El identificador se guarda sin clave foránea para conservar el historial si se elimina el producto. La auditoría forma parte de la misma transacción que la actualización de precios.
+
+### Demostración con los datos de prueba
+
+El ejemplo aumenta el precio de las camisetas de Boca y River en una sola sentencia y asigna a la del Real Madrid su precio vigente. También ejecuta un `UPDATE` sobre la descripción de la camiseta de Boca. La primera consulta debe devolver dos filas, una por cada precio que subió. La segunda debe devolver cero porque el `ROLLBACK` revierte los precios y los registros de la auditoría.
 
 ```sql
 USE aura_store;
 GO
 
--- 1. Verificar stock actual del producto antes de la compra
-SELECT stock_id, id_producto, talle, cantidad_disponible
-FROM stock
-WHERE stock_id = 1;
+DECLARE @ultima_auditoria BIGINT = ISNULL(
+    (SELECT MAX(id_auditoria) FROM dbo.auditoria_precio_producto), 0
+);
 
--- 2. Insertar compra de prueba
-INSERT INTO compra (id_cliente, id_metodo, fecha)
-VALUES (1, 1, GETDATE());
+BEGIN TRANSACTION;
 
-DECLARE @id_compra_nueva INT = SCOPE_IDENTITY();
+UPDATE dbo.producto
+SET precio_actual = CASE WHEN id_producto IN (1, 2)
+                         THEN precio_actual + 1000.00
+                         ELSE precio_actual END
+WHERE id_producto IN (1, 2, 3);
 
--- 3. Insertar detalle con cantidad disponible valida
-INSERT INTO detalle_compra (id_compra, stock_id, cantidad_comprada, precio_unitario)
-VALUES (@id_compra_nueva, 1, 1, 45000.00);
+UPDATE dbo.producto
+SET descripcion = 'Descripcion temporal para la prueba'
+WHERE id_producto = 1;
 
--- 4. Comprobar que el stock se haya descontado en 1 unidad
-SELECT stock_id, id_producto, talle, cantidad_disponible
-FROM stock
-WHERE stock_id = 1;
-```
+SELECT id_producto, precio_anterior, precio_nuevo, fecha_cambio_utc, login_cambio
+FROM dbo.auditoria_precio_producto
+WHERE id_auditoria > @ultima_auditoria
+  AND id_producto IN (1, 2, 3)
+ORDER BY id_producto;
 
-### 3.3. Prueba de fallo por stock insuficiente con reversión (Trigger)
+ROLLBACK TRANSACTION;
 
-```sql
-USE aura_store;
-GO
-
--- Intentar vender una cantidad superior a la disponible en stock
-INSERT INTO compra (id_cliente, id_metodo, fecha)
-VALUES (1, 1, GETDATE());
-
-DECLARE @id_compra_invalida INT = SCOPE_IDENTITY();
-
--- Debe arrojar error y hacer ROLLBACK
-INSERT INTO detalle_compra (id_compra, stock_id, cantidad_comprada, precio_unitario)
-VALUES (@id_compra_invalida, 1, 99999, 45000.00);
-
--- Comprobar que no se altero el stock
-SELECT stock_id, cantidad_disponible
-FROM stock
-WHERE stock_id = 1;
+SELECT COUNT(*) AS cambios_de_la_prueba_persistidos
+FROM dbo.auditoria_precio_producto
+WHERE id_auditoria > @ultima_auditoria
+  AND id_producto IN (1, 2, 3);
 ```
